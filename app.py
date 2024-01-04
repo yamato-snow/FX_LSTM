@@ -18,12 +18,15 @@ training_data_len = int(np.ceil(len(dataset) * .8))
 scaler = MinMaxScaler(feature_range=(0,1))
 scaled_data = scaler.fit_transform(dataset)
 
+# ウィンドウサイズの変数を定義
+window_size = 30  # または90など、異なる値を試す
+
 # トレーニングデータセットの作成
 train_data = scaled_data[0:int(training_data_len), :]
 x_train, y_train = [], []
 
-for i in range(60, len(train_data)):
-    x_train.append(train_data[i-60:i, 0])
+for i in range(window_size, len(train_data)):
+    x_train.append(train_data[i-window_size:i, 0])
     y_train.append(train_data[i, 0])
     
 x_train, y_train = np.array(x_train), np.array(y_train)
@@ -31,20 +34,20 @@ x_train = np.reshape(x_train, (x_train.shape[0], x_train.shape[1], 1))
 
 # LSTMモデルの構築
 model = Sequential()
-model.add(LSTM(50, return_sequences=True, input_shape=(x_train.shape[1], 1)))
-model.add(LSTM(50, return_sequences=False))
-model.add(Dense(25))
+model.add(LSTM(70, return_sequences=True, input_shape=(x_train.shape[1], 1))) # LSTM層のニュートロン数を増やすと精度が上がる
+model.add(LSTM(70, return_sequences=False)) # LSTM層のニュートロン数を増やすと精度が上がる
+model.add(Dense(30)) # Dense層のニュートロン数を増やすと精度が上がる
 model.add(Dense(1))
 
 # モデルのコンパイルと訓練
 model.compile(optimizer='adam', loss='mean_squared_error')
-model.fit(x_train, y_train, batch_size=1, epochs=1)
+model.fit(x_train, y_train, batch_size=1, epochs=10) # エポック数を増やすと精度が上がる
 
 # テストデータセットの作成
-test_data = scaled_data[training_data_len - 60: , :]
+test_data = scaled_data[training_data_len - window_size: , :]
 x_test, y_test = [], dataset[training_data_len:, :]
-for i in range(60, len(test_data)):
-    x_test.append(test_data[i-60:i, 0])
+for i in range(window_size, len(test_data)):
+    x_test.append(test_data[i-window_size:i, 0])
 
 x_test = np.array(x_test)
 x_test = np.reshape(x_test, (x_test.shape[0], x_test.shape[1], 1))
@@ -71,8 +74,8 @@ future_predictions = []
 last_date = data.index[-1]
 
 # 1年後までの予測を行うためのデータを準備
-last_60_days = scaled_data[-600:]
-current_batch = last_60_days.reshape((1, last_60_days.shape[0], 1))
+last_days = scaled_data[-window_size:]
+current_batch = last_days.reshape((1, last_days.shape[0], 1))
 
 # 1年後までの営業日のリストを生成（約252営業日）
 future_dates = pd.date_range(start=last_date, periods=252)
